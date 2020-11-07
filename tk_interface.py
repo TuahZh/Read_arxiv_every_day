@@ -30,7 +30,7 @@ class Application(tk.Frame):
         self.today["command"] = self.search_today
         self.today.pack(side=tk.TOP)
 
-        self.text = tk.Text(self)
+        self.text = tk.Text(self, state=tk.DISABLED)
 
         self.quit = tk.Button(self, text="QUIT", fg="red",
                               command=self.master.destroy)
@@ -95,8 +95,8 @@ class Application(tk.Frame):
         self.quit.pack_forget()
         self.quit.pack(side=tk.LEFT)
 
-    def show_message(self, mes):
-        messagebox.showinfo("Message", mes)
+    def show_message(self, mes, title="Message" ):
+        messagebox.showinfo(title, mes)
 
     def next(self):
         try:
@@ -155,12 +155,13 @@ class Application(tk.Frame):
                 self.items[ii].grid()
                 self.items[ii].menu = tk.Menu(self.items[ii], tearoff=0)
                 self.items[ii]['menu'] = self.items[ii].menu
-                self.items[ii].menu.add_command(label='get more', command=self.get_more)
+                self.items[ii].menu.add_command(label='Read abstract',
+                                                command=lambda: self.read_abstract(res['list_paper'][ii]))
                 self.items[ii].menu.add_command(label='arXiv link', command=self.linkto_arx)
                 self.items[ii].menu.add_command(label='ADS link', command=self.linkto_ads)
                 self.items[ii].pack(side=tk.TOP)
             if(setups['title']):
-                text += "Title: " + res['list_paper'][ii].title
+                text += "TITLE: " + res['list_paper'][ii].title
                 text += '\n'
                 height += 2
             if(setups['abstract']):
@@ -192,16 +193,38 @@ class Application(tk.Frame):
                 text += res['list_paper'][ii].date
                 text += '\n'
             self.items_text.append(tk.Text(self, height = height,
-                                           font=16,
-                                           wrap=tk.WORD))
+                                           font=14,
+                                           wrap=tk.WORD,
+                                           state=tk.DISABLED))
             self.items_text[ii].insert(tk.END, text)
             self.items_text[ii].pack(side=tk.TOP)
+            self.items_text[ii].tag_add("title", "1.0", "1.150")
+            self.items_text[ii].tag_config("title", font=("Georgia", "16", "bold"),
+                                           foreground = "blue")
             self._cur_id += 1
         if (self.fin):
             self.fin_sign = tk.Button(self, text="Fin",
                                       command = self.fin_func)
             self.fin_sign.pack(side=tk.BOTTOM)
 
+    def read_abstract(self, p):
+        widget_list = self.all_children()
+        for item in widget_list:
+            item.pack_forget()
+        read_abstract = tk.Text(self, font=16, wrap=tk.WORD, state=tk.DISABLED)
+        read_abstract.insert(tk.END, "Abstract: "+p.abstract)
+        read_abstract.insert(tk.END, "Title: "+p.title)
+        read_abstract.pack(side=tk.TOP)
+        back_button = tk.Button(self, text='Back', command=lambda: self.restore(widget_list))
+        back_button.pack(side=tk.BOTTOM)
+       # self.show_message(p.abstract, title="Abstract")
+
+    def restore(self,widget_list):
+        wl_tmp = self.all_children()
+        for item in wl_tmp:
+            item.pack_forget()
+#        for item in widget_list:
+#            item.pack()
     def get_more(self):
         pass
     def linkto_arx(self):
