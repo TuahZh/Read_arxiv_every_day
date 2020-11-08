@@ -22,30 +22,47 @@ class Application(tk.Frame):
         super().__init__(master)
         self.master = master
         self.pack()
+        self._widget_collection = {0:[]}
+        self._frame_titles = {0:''}
         self.create_widgets()
 
     def create_widgets(self):
+        _title = "Today"
+        self.winfo_toplevel().title(_title)
         self.today = tk.Button(self)
         self.today["text"] = "Today"
         self.today["command"] = self.search_today
         self.today.pack(side=tk.TOP)
 
-        self.text = tk.Text(self, state=tk.DISABLED)
+        self.text = tk.Text(self)
+        _text = """Seize the day, then let it go.
+                                           -- Marty Rubin"""
+        self.text.tag_config('center', justify='center')
+        self.text.insert(tk.END, _text)
+        self.text.tag_add('center','1.0',tk.END)
+        self.text.pack(side=tk.TOP)
+        self.text['state'] = tk.DISABLED
 
         self.quit = tk.Button(self, text="QUIT", fg="red",
                               command=self.master.destroy)
         self.quit.pack(side=tk.BOTTOM)
+        self._widget_collection[1] = [(self.today, tk.TOP),
+                                      (self.text, tk.TOP),
+                                      (self.quit, tk.BOTTOM)]
+        self._frame_titles[1] = _title
 
     def search_today(self):
-#        self.today.pack_forget()
-#        self.today["text"] = "Fetching"
-#        self.today.pack(side=tk.TOP)
-        # not working
+        _title = "Summary"
+        self.winfo_toplevel().title(_title)
+        widget_list = self.all_children()
+        for item in widget_list:
+            item.pack_forget()
         self.fin = False
         pl, ts = arxiv_reading()
         lp_c = ListPapers(pl)
-        self.text.insert(tk.END, mystdout.getvalue())
-        self.text.pack(sid=tk.TOP)
+        self.summary = tk.Text(self)
+        self.summary.insert(tk.END, mystdout.getvalue())
+        self.summary.pack(sid=tk.TOP)
         try:
             lp_c.add_key_words(self._kws, self._boost)
         except AttributeError:
@@ -58,17 +75,20 @@ class Application(tk.Frame):
                     lp_d = lp_c.filter_subjects(self._fs, exclude=False)
         except AttributeError:
             lp_d = lp_c
-        self.text.insert(tk.END, lp_d.summary(called_tk=True))
+        self.summary.insert(tk.END, lp_d.summary(called_tk=True))
         self._lp = lp_d
         self._cur_id = 0
-        self.today.pack_forget()
-        self.seguir = tk.Button(self, text="Continue", fg="red",
+        self.seguir_button = tk.Button(self, text="Continue", fg="red",
                                 command=self.seguir)
-        self.seguir.pack(side=tk.RIGHT)
-        self.quit.pack_forget()
+        self.seguir_button.pack(side=tk.RIGHT)
         self.quit.pack(side=tk.LEFT)
+        self._widget_collection[2] = [(self.summary, tk.TOP),
+                                      (self.seguir_button, tk.RIGHT),
+                                      (self.quit, tk.LEFT)]
+        self._frame_titles[2] = _title
 
     def seguir(self):
+        _title = "Head"
         try:
             sigp_n = self._sigp_n
         except AttributeError:
@@ -86,19 +106,36 @@ class Application(tk.Frame):
             sync = False
         res = self._lp.head(n=sigp_n, sync=sync, called_tk=True)
         self.head_setup()
-        self.text.pack_forget()
+        self.summary.pack_forget()
         self.show_items(self._hd_setups, res)
-        self.seguir.pack_forget()
-        self.seguir["text"] = "Next"
-        self.seguir["command"] = self.next
-        self.seguir.pack(side=tk.RIGHT)
+        self.seguir_button.pack_forget()
+        self.next_button = tk.Button(self)
+        self.next_button["text"] = "Next"
+        self.next_button["command"] = self.next
+        self.next_button.pack(side=tk.RIGHT)
         self.quit.pack_forget()
         self.quit.pack(side=tk.LEFT)
+        _title += " %d papers" % sigp_n
+        self.winfo_toplevel().title(_title)
+        try:
+            self._widget_collection[3] = [(self.items, tk.TOP),
+                                          (self.items_text, tk.TOP),
+                                          (self.fin_sign, tk.BOTTOM),
+                                          (self.next_button, tk.RIGHT),
+                                          (self.quit, tk.LEFT)]
+        except AttributeError:
+            self._widget_collection[3] = [(self.items, tk.TOP),
+                                          (self.items_text, tk.TOP),
+                                          (self.next_button, tk.RIGHT),
+                                          (self.quit, tk.LEFT)]
+        self._frame_titles[3] = _title
 
     def show_message(self, mes, title="Message" ):
         messagebox.showinfo(title, mes)
 
     def next(self):
+        _title = ""
+        self.winfo_toplevel().title(_title)
         try:
             n_perp = self._n_perp
         except AttributeError:
@@ -113,8 +150,20 @@ class Application(tk.Frame):
         if (self._cur_id+n_perp>=self._lp.tot_num):
             self.fin = True
         self.show_items(self._nx_setups, res)
-        self.seguir.pack(side=tk.RIGHT)
+        self.next_button.pack(side=tk.RIGHT)
         self.quit.pack(side=tk.LEFT)
+        try:
+            self._widget_collection[3] = [(self.items, tk.TOP),
+                                          (self.items_text, tk.TOP),
+                                          (self.fin_sign, tk.BOTTOM),
+                                          (self.next_button, tk.RIGHT),
+                                          (self.quit, tk.LEFT)]
+        except AttributeError:
+            self._widget_collection[3] = [(self.items, tk.TOP),
+                                          (self.items_text, tk.TOP),
+                                          (self.next_button, tk.RIGHT),
+                                          (self.quit, tk.LEFT)]
+        self._frame_titles[3] = _title
 
     def head_setup(self):
         try:
@@ -194,13 +243,13 @@ class Application(tk.Frame):
                 text += '\n'
             self.items_text.append(tk.Text(self, height = height,
                                            font=14,
-                                           wrap=tk.WORD,
-                                           state=tk.DISABLED))
+                                           wrap=tk.WORD))
             self.items_text[ii].insert(tk.END, text)
             self.items_text[ii].pack(side=tk.TOP)
             self.items_text[ii].tag_add("title", "1.0", "1.150")
             self.items_text[ii].tag_config("title", font=("Georgia", "16", "bold"),
                                            foreground = "blue")
+            self.items_text[ii]['state'] = tk.DISABLED
             self._cur_id += 1
         if (self.fin):
             self.fin_sign = tk.Button(self, text="Fin",
@@ -208,23 +257,38 @@ class Application(tk.Frame):
             self.fin_sign.pack(side=tk.BOTTOM)
 
     def read_abstract(self, p):
+        # store the previous apearance
         widget_list = self.all_children()
         for item in widget_list:
             item.pack_forget()
-        read_abstract = tk.Text(self, font=16, wrap=tk.WORD, state=tk.DISABLED)
+        read_abstract = tk.Text(self, font=16, wrap=tk.WORD)
         read_abstract.insert(tk.END, "Abstract: "+p.abstract)
         read_abstract.insert(tk.END, "Title: "+p.title)
         read_abstract.pack(side=tk.TOP)
-        back_button = tk.Button(self, text='Back', command=lambda: self.restore(widget_list))
+        back_button = tk.Button(self, text='Back',
+                                command=lambda: self.restore(3))
         back_button.pack(side=tk.BOTTOM)
        # self.show_message(p.abstract, title="Abstract")
 
-    def restore(self,widget_list):
+    def restore(self, frame_id):
         wl_tmp = self.all_children()
         for item in wl_tmp:
             item.pack_forget()
-#        for item in widget_list:
-#            item.pack()
+        if (frame_id==3):
+            _items = self._widget_collection[frame_id][0][0]
+            _side = self._widget_collection[frame_id][0][1]
+            _items_text = self._widget_collection[frame_id][1][0]
+            _side_text = self._widget_collection[frame_id][1][1]
+            for ii, tt in zip(_items, _items_text):
+                ii.pack(side=_side)
+                tt.pack(side=_side_text)
+            for item in self._widget_collection[frame_id][2:]:
+                item[0].pack(side=item[1])
+        else:
+            for item in self._widget_collection[frame_id]:
+                item[0].pack(side=item[1])
+#        for item, xx, yy in zip(widget_list, x_list, y_list):
+#            item.place(x=xx,y=yy)
     def get_more(self):
         pass
     def linkto_arx(self):
