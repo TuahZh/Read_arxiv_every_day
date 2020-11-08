@@ -14,7 +14,7 @@ from papers import *
 from io import StringIO
 import sys
 from tkinter import messagebox
-
+import webbrowser
 
 
 class Application(tk.Frame):
@@ -206,8 +206,10 @@ class Application(tk.Frame):
                 self.items[ii]['menu'] = self.items[ii].menu
                 self.items[ii].menu.add_command(label='Read abstract',
                                                 command=lambda: self.read_abstract(res['list_paper'][ii]))
-                self.items[ii].menu.add_command(label='arXiv link', command=self.linkto_arx)
-                self.items[ii].menu.add_command(label='ADS link', command=self.linkto_ads)
+                self.items[ii].menu.add_command(label='Open arXiv',
+                                                command=lambda: self.linkto_arx(res['list_paper'][ii]))
+                self.items[ii].menu.add_command(label='Open ADS',
+                                                command=lambda: self.linkto_ads(res['list_paper'][ii]))
                 self.items[ii].pack(side=tk.TOP)
             if(setups['title']):
                 text += "TITLE: " + res['list_paper'][ii].title
@@ -287,14 +289,38 @@ class Application(tk.Frame):
         else:
             for item in self._widget_collection[frame_id]:
                 item[0].pack(side=item[1])
-#        for item, xx, yy in zip(widget_list, x_list, y_list):
-#            item.place(x=xx,y=yy)
-    def get_more(self):
-        pass
-    def linkto_arx(self):
-        pass
-    def linkto_ads(self):
-        pass
+
+    def linkto_arx(self, p):
+        try:
+            _link = p.link
+            if (_link != ''):
+                webbrowser.open(_link, new=2)
+                return
+        finally:
+            p.search_online()
+            _link = p.link
+            if (_link != ''):
+                webbrowser.open(_link, new=2)
+                return
+            else:
+                self.show_message("Sorry, I didn't find the arXiv link for this paper.")
+                return
+
+    def linkto_ads(self, p):
+        try:
+            _link = p.link_ads
+            if (_link != ''):
+                webbrowser.open(_link, new=2)
+                return
+        finally:
+            p.search_online()
+            _link = p.link_ads
+            if (_link != ''):
+                webbrowser.open(_link, new=2)
+                return
+            else:
+                self.show_message("Sorry, I didn't find ADS link for this paper.")
+                return
     def fin_func(self):
         self.master.destroy()
 
