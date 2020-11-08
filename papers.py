@@ -163,9 +163,22 @@ class Paper(object):
     def customized_fields(self, key_name, value):
         self.customized_fields[key_name] = value
         
-    def fetch_pdf(self):
-        pass
-
+    def fetch_pdf(self, path='/does/not/exist', filename=None,
+                  timeout=300.):
+        """Get the pdf from arxiv website
+        timeout in seconds"""
+        path += '/'
+        if(filename==None):
+            filename = self.arxiv_id + '.pdf'
+        try:
+            _url_prefix = "https://arxiv.org/pdf/"
+            _url = _url_prefix + self.arxiv_id
+            _response = requests.get(_url, timeout=timeout)
+            with open(path + filename, "wb") as f:
+                f.write(_response.content)
+            return True
+        except:
+            return False
 
 def arxiv_reading(url=None, nap=5.):
     """Daily reading arxiv:

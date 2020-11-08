@@ -15,7 +15,7 @@ from io import StringIO
 import sys
 from tkinter import messagebox
 import webbrowser
-
+import os
 
 class Application(tk.Frame):
     def __init__(self, master=None):
@@ -24,6 +24,7 @@ class Application(tk.Frame):
         self.pack()
         self._widget_collection = {0:[]}
         self._frame_titles = {0:''}
+        self.timeout = 600 # 10 min in seconds
         self.create_widgets()
 
     def create_widgets(self):
@@ -210,6 +211,10 @@ class Application(tk.Frame):
                                                 command=lambda: self.linkto_arx(res['list_paper'][ii]))
                 self.items[ii].menu.add_command(label='Open ADS',
                                                 command=lambda: self.linkto_ads(res['list_paper'][ii]))
+                self.items[ii].menu.add_command(label='Get PDF',
+                                                command=lambda: self.fetch_pdf(res['list_paper'][ii]))
+                self.items[ii].menu.add_command(label='Org in org',
+                                                command=lambda: self.org_write(res['list_paper'][ii]))
                 self.items[ii].pack(side=tk.TOP)
             if(setups['title']):
                 text += "TITLE: " + res['list_paper'][ii].title
@@ -321,8 +326,107 @@ class Application(tk.Frame):
             else:
                 self.show_message("Sorry, I didn't find ADS link for this paper.")
                 return
+    def fetch_pdf(self, p):
+        try:
+            _path = self.pdf_path
+        except AttributeError:
+            _path = './pdf'
+            self.pdf_path = _path
+        if(not os.path.isdir(_path)):
+            os.mkdir(_path)
+        try:
+            _filename = p.customized_fields["pdf"]
+        except KeyError:
+            _filename = p.arxiv_id + '.pdf'
+            p.customized_fields["pdf"] = _path+_filename
+        _get = p.fetch_pdf(path=_path, timeout=self.timeout,
+                           filename=_filename)
+        if(_get):
+            self.show_message("Download a PDF file.")
+        else:
+            self.show_message("No, I cannot get the pdf.")
+
     def fin_func(self):
         self.master.destroy()
+
+    def wait_message(self, msg='Wait'):
+        self.top_message = tk.Toplevel()
+        self.top_message.title('Wait')
+        self.top_message.geometry("200x200")
+        _msg = tk.Message(self.top_message,
+                          text=msg, padx=20, pady=20)
+        _msg.pack(side=tk.TOP)
+        _ignore_button = tk.Button(self.top_message)
+        _ignore_button['text'] = "I don't care"
+        _ignore_button['command'] = self.top_message.destroy
+        _ignore_button.pack(side=tk.BOTTOM)
+    def org_write(self, p, filename="./org_paper.org"):
+        p.search_online()
+        try:
+            hist_name = self.hist_name
+        except AttributeError:
+            hist_name = './history.pkl'
+            self.hist_name = hist_name
+        if(not os.path.isfile(hist_name)):
+            _hist = {}
+            _hist['day'] = 0
+            _hist['org_id'] = 0
+            self.history = _hist
+        else:
+            with open(hist_name, 'rb') as f:
+                _hist = pck.load(f)
+        if(not os.path.isfile(filename)):
+            _write_sign = 'w'
+        else:
+            _write_sign = 'a'
+        try:
+            _lead_info = self.lead_info
+        except AttributeError:
+            _lead_info = 'title'
+            self.lead_info = _lead_info
+        _hist['org_id'] += 1
+        if(_lead_info=='title'):
+            _content = """
+* [%d] """ % _hist['org_id'] + p.title
+            _content += """
+- Authors: """
+            for aa in p.authors:
+                _content += aa + "; "
+        elif(_lead_info=='authors'):
+            _content = """
+* [%d] """ % _hist['org_id']
+            for aa in p.authors:
+                _content += aa + "; "
+            _content += """
+- Title: """ + p.title
+        _content += """
+- Abstract: """ + p.abstract
+        _content += """
+- arXiv date: """ + p.date
+        _content += """
+- arXiv link: [[""" + p.link + "]]"
+        _content += """
+- ADS link: [[""" + p.link_ads + "]]"
+        try:
+            _path = self.pdf_path
+        except AttributeError:
+            _path = './pdf'
+            self.pdf_path = _path
+        try:
+            _pdf_filename = p.customized_fields["pdf"]
+        except KeyError:
+            _pdf_filename = p.arxiv_id + '.pdf'
+            p.customized_fields["pdf"] = _path+_pdf_filename
+        _content += """
+- [[file: """ + \
+        _pdf_filename + \
+        """][PDF]]
+        """
+        if(not os.path.isfile(_pdf_filename)):
+           self.fetch_pdf(p)
+        with open(filename, _write_sign) as f:
+            f.write(_content)
+        pass
 
 old_stdout = sys.stdout
 sys.stdout = mystdout = StringIO()
