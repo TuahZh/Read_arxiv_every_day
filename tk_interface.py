@@ -17,6 +17,7 @@ from tkinter import messagebox
 import webbrowser
 import os
 
+sys.stdout = mystdout = StringIO()
 class Application(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
@@ -60,6 +61,8 @@ class Application(tk.Frame):
             item.pack_forget()
         self.fin = False
         pl, ts = arxiv_reading()
+        self.pl = pl
+        self.ts = ts
         lp_c = ListPapers(pl)
         self.summary = tk.Text(self)
         self.summary.insert(tk.END, mystdout.getvalue())
@@ -261,6 +264,7 @@ class Application(tk.Frame):
         if (self.fin):
             self.fin_sign = tk.Button(self, text="Fin",
                                       command = self.fin_func)
+            self.quit['command'] = self.fin_func
             self.fin_sign.pack(side=tk.BOTTOM)
 
     def read_abstract(self, p):
@@ -347,7 +351,38 @@ class Application(tk.Frame):
             self.show_message("No, I cannot get the pdf.")
 
     def fin_func(self):
+        self.finishing()
         self.master.destroy()
+
+    def finishing(self):
+        try:
+            _cache = self._cache
+        except AttributeError:
+            _cache = './.cache'
+            self._cache = _cache
+        if (not os.path.isdir(_cache)):
+            os.mkdir(_cache)
+        _cache_f = _cache+"/"+self.ts.split(",")[-1].strip().replace(" ", "_")+"_paper_list.pkl"
+        if (os.path.isfile(_cache_f)):
+            return
+        else:
+            with open(_cache_f, "wb") as f:
+                pck.dump(self.pl, f)
+        try:
+            hist_name = self.hist_name
+        except AttributeError:
+            hist_name = './history.pkl'
+            self.hist_name = hist_name
+        if(os.path.isfile(hist_name)):
+            with open (hist_name, 'rb'):
+                _hist = pck.load(f)
+        else:
+            _hist = {}
+            _hist['day'] = 0
+            _hist['org_id'] = 0
+        _hist['day'] += 1
+        with open(hist_name, 'wb') as f:
+            pck.dump(_hist, f)
 
     def wait_message(self, msg='Wait'):
         self.top_message = tk.Toplevel()
@@ -416,7 +451,7 @@ class Application(tk.Frame):
             _pdf_filename = p.customized_fields["pdf"]
         except KeyError:
             _pdf_filename = p.arxiv_id + '.pdf'
-            p.customized_fields["pdf"] = _path+_pdf_filename
+            p.customized_fields["pdf"] = _pdf_filename
         _content += """
 - [[file: """ + \
         _pdf_filename + \
@@ -428,10 +463,3 @@ class Application(tk.Frame):
             f.write(_content)
         pass
 
-old_stdout = sys.stdout
-sys.stdout = mystdout = StringIO()
-root = tk.Tk()
-app = Application(master=root)
-app.mainloop()
-
-sys.stdout = old_stdout
