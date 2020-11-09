@@ -2,6 +2,9 @@
 Read a list of paper from arxiv every day
 and orgnize them in some plain text formats
 
-dependence: some modules
+dependence: 
+- Python 3.6 or maybe higher
+- ./requirements.txt
+
 
 run: python main.py
