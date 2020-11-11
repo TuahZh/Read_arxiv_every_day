@@ -374,7 +374,7 @@ class Application(tk.Frame):
             hist_name = './history.pkl'
             self.hist_name = hist_name
         if(os.path.isfile(hist_name)):
-            with open (hist_name, 'rb'):
+            with open (hist_name, 'rb') as f:
                 _hist = pck.load(f)
         else:
             _hist = {}
